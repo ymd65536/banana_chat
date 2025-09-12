@@ -20,7 +20,7 @@ from chat_message_widget import ChatMessageWidget
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("設定")
+        self.setWindowTitle("GEMINI_API_KEYの設定")
 
         self.settings = QSettings("GeminiApp", "Chat")
 
@@ -56,8 +56,8 @@ class MainWindow(QMainWindow):
 
         # --- メニューバーの作成 ---
         menu_bar = self.menuBar()
-        file_menu = menu_bar.addMenu("ファイル")
-        settings_action = file_menu.addAction("設定")
+        file_menu = menu_bar.addMenu("設定")
+        settings_action = file_menu.addAction("GEMINI_API_KEYの設定")
         settings_action.triggered.connect(self.open_settings_dialog)
 
         # --- UIのセットアップ ---
