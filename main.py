@@ -1,21 +1,19 @@
-from google import genai
 
 from typing import Optional
 import sys
 import os
 import base64
-import asyncio
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QListWidget, QLineEdit, QPushButton, QListWidgetItem, QFileDialog,
     QDialog, QLabel, QDialogButtonBox
 )
-from PySide6.QtCore import Slot, QTimer, QThread, QObject, Signal, QSettings
+from PySide6.QtCore import Slot, QTimer, QThread, QSettings
 
 # 上で作成したカスタムウィジェットをインポート
 from chat_message_widget import ChatMessageWidget
-
+from google.gemini_worker import GeminiWorker
 
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
@@ -269,40 +267,6 @@ class MainWindow(QMainWindow):
     def open_settings_dialog(self):
         """設定ダイアログを表示する"""
         self.settings_dialog.exec_()
-
-
-# バックグラウンドでGemini APIと通信するためのワーカー
-class GeminiWorker(QObject):
-    response_ready = Signal(str)
-    error_occurred = Signal(str)
-
-    def __init__(self, api_key: str, prompt: str):
-        super().__init__()
-        self.api_key = api_key
-        self.prompt = prompt
-
-    @Slot()
-    def run(self):
-        """APIリクエストを実行する"""
-        loop = None  # finallyブロックで参照できるようにするため
-        try:
-            # このスレッド用の新しいイベントループを作成して設定
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            client = genai.Client(api_key=self.api_key)
-
-            response = client.models.generate_content(
-                model='gemini-2.0-flash',
-                contents=self.prompt
-            )
-
-            self.response_ready.emit(response.text)
-        except Exception as e:
-            self.error_occurred.emit(f"APIエラー: {e}")
-        finally:
-            # イベントループを閉じる
-            if loop:
-                loop.close()
 
 
 if __name__ == "__main__":
