@@ -8,12 +8,44 @@ import asyncio
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QListWidget, QLineEdit, QPushButton, QListWidgetItem, QFileDialog
+    QListWidget, QLineEdit, QPushButton, QListWidgetItem, QFileDialog,
+    QDialog, QLabel, QDialogButtonBox
 )
-from PySide6.QtCore import Slot, QTimer, QThread, QObject, Signal
+from PySide6.QtCore import Slot, QTimer, QThread, QObject, Signal, QSettings
 
 # 上で作成したカスタムウィジェットをインポート
 from chat_message_widget import ChatMessageWidget
+
+
+class SettingsDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("設定")
+
+        self.settings = QSettings("GeminiApp", "Chat")
+
+        layout = QVBoxLayout(self)
+
+        # APIキー入力
+        api_key_layout = QHBoxLayout()
+        self.api_key_label = QLabel("GEMINI_API_KEY:")
+        self.api_key_input = QLineEdit()
+        self.api_key_input.setText(self.settings.value("GEMINI_API_KEY", ""))
+        api_key_layout.addWidget(self.api_key_label)
+        api_key_layout.addWidget(self.api_key_input)
+        layout.addLayout(api_key_layout)
+
+        # OK/キャンセルボタン
+        self.button_box = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        layout.addWidget(self.button_box)
+
+    def accept(self):
+        """OKボタンが押されたときに設定を保存する"""
+        self.settings.setValue("GEMINI_API_KEY", self.api_key_input.text())
+        super().accept()
 
 
 class MainWindow(QMainWindow):
@@ -21,6 +53,12 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Chat UI")
         self.resize(400, 600)
+
+        # --- メニューバーの作成 ---
+        menu_bar = self.menuBar()
+        file_menu = menu_bar.addMenu("ファイル")
+        settings_action = file_menu.addAction("設定")
+        settings_action.triggered.connect(self.open_settings_dialog)
 
         # --- UIのセットアップ ---
         # チャット履歴を表示するリストウィジェット
@@ -75,6 +113,9 @@ class MainWindow(QMainWindow):
         # --- 初期メッセージの追加 ---
         self.add_message(text="こんにちは、GitHub Copilotです。", is_my_message=False)
         self.add_message(text="こんにちは！", is_my_message=True)
+
+        # --- 設定ダイアログ ---
+        self.settings_dialog = SettingsDialog(self)
 
     def add_message(self, text: Optional[str] = None, image_data_base64: Optional[str] = None, is_my_message: bool = False):
         """チャットリストに新しいメッセージ（テキストまたは画像）を追加する"""
@@ -147,9 +188,15 @@ class MainWindow(QMainWindow):
 
         # ここで相手からの返信をシミュレートするなどのロジックを追加できます
         if text:
-            self.get_gemini_response(text)
+            self.get_gemini_response(prompt=text)
         elif image_data_base64:
             self.add_message(text="素敵な画像ですね！", is_my_message=False)
+
+    @Slot()
+    def open_settings_dialog(self):
+        """設定ダイアログを開く"""
+        dialog = SettingsDialog(self)
+        dialog.exec()
 
     def get_gemini_response(self, prompt: str):
         """Geminiからの応答を非同期で取得する"""
@@ -157,9 +204,10 @@ class MainWindow(QMainWindow):
         if self.is_processing:
             return
 
-        GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+        settings = QSettings("MySoft", "ChatApp")
+        GEMINI_API_KEY = settings.value("GEMINI_API_KEY")
         if not GEMINI_API_KEY:
-            self.add_message(text="GEMINI_API_KEYが設定されていません。",
+            self.add_message(text="GEMINI_API_KEYが設定されていません。メニューから設定してください。",
                              is_my_message=False)
             return
 
@@ -211,6 +259,16 @@ class MainWindow(QMainWindow):
         # UIを有効化
         self.send_button.setEnabled(True)
         self.message_line_edit.setEnabled(True)
+
+    def closeEvent(self, event):
+        """ウィンドウが閉じられるときに呼ばれる"""
+        # 設定ダイアログも閉じる
+        self.settings_dialog.close()
+        event.accept()
+
+    def open_settings_dialog(self):
+        """設定ダイアログを表示する"""
+        self.settings_dialog.exec_()
 
 
 # バックグラウンドでGemini APIと通信するためのワーカー
