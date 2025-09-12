@@ -204,7 +204,7 @@ class MainWindow(QMainWindow):
         if self.is_processing:
             return
 
-        settings = QSettings("MySoft", "ChatApp")
+        settings = QSettings("GeminiApp", "Chat")
         GEMINI_API_KEY = settings.value("GEMINI_API_KEY")
         if not GEMINI_API_KEY:
             self.add_message(text="GEMINI_API_KEYが設定されていません。メニューから設定してください。",
