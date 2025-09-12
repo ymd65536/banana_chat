@@ -38,6 +38,29 @@ pyside6-designer
 pyside6-uic main_window.ui -o ui_main_window.py
 ```
 
+# GenAI SDKとGemini APIキーの設定
+
+```bash
+pip install google-genai
+pip install pillow
+```
+
+変更前のGoogle GenAI SDK（Vertex AI SDK）
+
+```bash
+pip install google-generativeai
+```
+
+コード
+
+```python
+import google.generativeai as genai
+
+genai.configure(api_key=self.api_key)
+model = genai.GenerativeModel('gemini-1.5-flash')
+response = model.generate_content(self.prompt)
+```
+
 ## まとめ
 
 この「UIデザイン(Designer)とロジック(Pythonコード)を分離する」方法が、PythonでQtアプリを開発する際の王道です。
