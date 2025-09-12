@@ -228,7 +228,7 @@ class GeminiWorker(QObject):
         """APIリクエストを実行する"""
         loop = None  # finallyブロックで参照できるようにするため
         try:
-            # このスread用の新しいイベントループを作成して設定
+            # このスレッド用の新しいイベントループを作成して設定
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             client = genai.Client(api_key=self.api_key)
