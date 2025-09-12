@@ -38,7 +38,7 @@ pyside6-designer
 pyside6-uic main_window.ui -o ui_main_window.py
 ```
 
-# GenaI SDKとGemini APIキーの設定
+# GenAI SDKとGemini APIキーの設定
 
 ```bash
 pip install google-genai
