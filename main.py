@@ -19,7 +19,6 @@ class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("GEMINI_API_KEYの設定")
-
         self.settings = QSettings("GeminiApp", "Chat")
 
         layout = QVBoxLayout(self)
@@ -49,7 +48,7 @@ class SettingsDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Chat UI")
+        self.setWindowTitle("Banana Chat")
         self.resize(400, 600)
 
         # --- メニューバーの作成 ---
