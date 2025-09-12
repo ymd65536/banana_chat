@@ -4,6 +4,8 @@ from typing import Optional
 import sys
 import os
 import base64
+import asyncio
+
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QListWidget, QLineEdit, QPushButton, QListWidgetItem, QFileDialog
@@ -224,15 +226,25 @@ class GeminiWorker(QObject):
     @Slot()
     def run(self):
         """APIリクエストを実行する"""
+        loop = None  # finallyブロックで参照できるようにするため
         try:
+            # このスread用の新しいイベントループを作成して設定
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
             client = genai.Client(api_key=self.api_key)
+
             response = client.models.generate_content(
-                model="gemini-1.5-flash",
+                model='gemini-2.0-flash',
                 contents=self.prompt
             )
+
             self.response_ready.emit(response.text)
         except Exception as e:
             self.error_occurred.emit(f"APIエラー: {e}")
+        finally:
+            # イベントループを閉じる
+            if loop:
+                loop.close()
 
 
 if __name__ == "__main__":
