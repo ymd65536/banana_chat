@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Slot, QTimer, QThread, QSettings
 
 # 上で作成したカスタムウィジェットをインポート
-from chat_message_widget import ChatMessageWidget
+from ui.chat_message_widget import ChatMessageWidget
 from google.gemini_worker import GeminiWorker
 
 class SettingsDialog(QDialog):
