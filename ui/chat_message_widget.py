@@ -55,7 +55,8 @@ class ChatMessageWidget(QWidget):
                     200, Qt.TransformationMode.SmoothTransformation)
             image_label.setPixmap(pixmap)
             # 画像の場合は背景を透明にし、パディングをなくす
-            image_label.setStyleSheet("background-color: transparent; padding: 0px;")
+            image_label.setStyleSheet(
+                "background-color: transparent; padding: 0px;")
             content_layout.addWidget(image_label)
 
         # テキストがある場合の処理
@@ -63,7 +64,8 @@ class ChatMessageWidget(QWidget):
             text_label = QLabel(text)
             text_label.setWordWrap(True)
             # テキストの場合は背景を透明にし、パディングをなくす
-            text_label.setStyleSheet("background-color: transparent; padding: 0px;")
+            text_label.setStyleSheet(
+                "background-color: transparent; padding: 4px;font-size: 16px;")
             content_layout.addWidget(text_label)
 
         # メッセージの寄せ方を設定

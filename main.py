@@ -1,26 +1,87 @@
-from google import genai
 
 from typing import Optional
 import sys
 import os
-import base64
-import asyncio
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QListWidget, QLineEdit, QPushButton, QListWidgetItem, QFileDialog
+    QListWidget, QLineEdit, QPushButton, QListWidgetItem, QFileDialog,
+    QDialog, QLabel, QDialogButtonBox
 )
-from PySide6.QtCore import Slot, QTimer, QThread, QObject, Signal
+from PySide6.QtCore import Slot, QTimer, QThread, QSettings
 
 # 上で作成したカスタムウィジェットをインポート
-from chat_message_widget import ChatMessageWidget
+from ui.chat_message_widget import ChatMessageWidget
+from google.gemini_worker import GeminiWorker
+from media.image_base64 import pil_image_base64
+
+class SettingsDialog(QDialog):
+    def _q_settings(self) -> QSettings:
+        """QSettingsのインスタンスを返す"""
+        return QSettings("GeminiApp", "Chat")
+
+    def get_gemini_api_key(self) -> Optional[str]:
+        """設定からGEMINI_API_KEYを取得する"""
+        settings = self._q_settings()
+        return settings.value("GEMINI_API_KEY", None)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("GEMINI_API_KEYの設定")
+        self.settings = self._q_settings()
+
+        layout = QVBoxLayout(self)
+
+        # APIキー入力
+        api_key_layout = QHBoxLayout()
+        self.api_key_label = QLabel("GEMINI_API_KEY:")
+        self.api_key_input = QLineEdit()
+        self.api_key_input.setText(self.settings.value("GEMINI_API_KEY", ""))
+        api_key_layout.addWidget(self.api_key_label)
+        api_key_layout.addWidget(self.api_key_input)
+        layout.addLayout(api_key_layout)
+
+        # OK/キャンセルボタン
+        self.button_box = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        layout.addWidget(self.button_box)
+
+    def accept(self):
+        """OKボタンが押されたときに設定を保存する"""
+        self.settings.setValue("GEMINI_API_KEY", self.api_key_input.text())
+        super().accept()
 
 
 class MainWindow(QMainWindow):
+    def _q_settings(self) -> QSettings:
+        """QSettingsのインスタンスを返す"""
+        return QSettings("GeminiApp", "Chat")
+
+    def get_gemini_api_key(self) -> Optional[str]:
+        """設定からGEMINI_API_KEYを取得する"""
+        settings = self._q_settings()
+        return settings.value("GEMINI_API_KEY", None)
+
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Chat UI")
-        self.resize(400, 600)
+        self.setWindowTitle("Banana Chat")
+
+        # 画面サイズに合わせてウィンドウをリサイズ
+        screen = QApplication.primaryScreen()
+        if screen:
+            screen_geometry = screen.availableGeometry()
+            self.resize(screen_geometry.width(), screen_geometry.height())
+        else:
+            # フォールバックサイズ
+            self.resize(800, 600)
+
+        # --- メニューバーの作成 ---
+        menu_bar = self.menuBar()
+        file_menu = menu_bar.addMenu("設定")
+        settings_action = file_menu.addAction("GEMINI_API_KEYの設定")
+        settings_action.triggered.connect(self.open_settings_dialog)
 
         # --- UIのセットアップ ---
         # チャット履歴を表示するリストウィジェット
@@ -73,8 +134,11 @@ class MainWindow(QMainWindow):
             self.on_send_button_clicked)
 
         # --- 初期メッセージの追加 ---
-        self.add_message(text="こんにちは、GitHub Copilotです。", is_my_message=False)
+        self.add_message(text="こんにちは、bananaです。", is_my_message=False)
         self.add_message(text="こんにちは！", is_my_message=True)
+
+        # --- 設定ダイアログ ---
+        self.settings_dialog = SettingsDialog(self)
 
     def add_message(self, text: Optional[str] = None, image_data_base64: Optional[str] = None, is_my_message: bool = False):
         """チャットリストに新しいメッセージ（テキストまたは画像）を追加する"""
@@ -123,15 +187,7 @@ class MainWindow(QMainWindow):
     def on_send_button_clicked(self):
         """送信ボタンがクリックされたときに呼ばれる"""
         text = self.message_line_edit.text()
-        original_image_path = self.attached_image_path
-        image_data_base64 = None
-
-        # 画像が添付されている場合、Base64にエンコードする
-        if original_image_path:
-            with open(original_image_path, "rb") as image_file:
-                image_data = image_file.read()
-                image_data_base64 = base64.b64encode(
-                    image_data).decode("utf-8")
+        image_data_base64 = pil_image_base64(self.attached_image_path)
 
         # テキストも画像もなければ何もしない
         if not text and not image_data_base64:
@@ -145,33 +201,30 @@ class MainWindow(QMainWindow):
         self.attached_image_path = None
         self.message_line_edit.setPlaceholderText("メッセージを入力...")
 
-        # ここで相手からの返信をシミュレートするなどのロジックを追加できます
-        if text:
-            self.get_gemini_response(text)
-        elif image_data_base64:
-            self.add_message(text="素敵な画像ですね！", is_my_message=False)
-
-    def get_gemini_response(self, prompt: str):
-        """Geminiからの応答を非同期で取得する"""
-        # 処理中であれば、新しいリクエストは受け付けない
-        if self.is_processing:
-            return
-
-        GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+        GEMINI_API_KEY = self.get_gemini_api_key()
         if not GEMINI_API_KEY:
-            self.add_message(text="GEMINI_API_KEYが設定されていません。",
+            self.add_message(text="GEMINI_API_KEYが設定されていません。メニューから設定してください。",
                              is_my_message=False)
             return
 
-        # 状態を「処理中」に更新し、UIを無効化
-        self.is_processing = True
-        self.send_button.setEnabled(False)
-        self.message_line_edit.setEnabled(False)
-        self.add_message(text="...", is_my_message=False)
+        self.worker = GeminiWorker(api_key=GEMINI_API_KEY, prompt=text)
 
+        # ここで相手からの返信をシミュレートするなどのロジックを追加できます
+        if text and image_data_base64:
+            self.add_message(text="banana!!", is_my_message=False)
+        elif text:
+            self._get_gemini_response()
+
+    def _status_change(self, processing: bool):
+        """状態を変更し、UIの有効/無効を切り替える"""
+        self.is_processing = processing
+        self.send_button.setEnabled(not processing)
+        self.message_line_edit.setEnabled(not processing)
+    
+    def _start_thread(self):
+        """Gemini API呼び出し用のスレッドを開始する"""
         # スレッドとワーカーをインスタンス変数として作成
         self.gemini_thread = QThread()
-        self.worker = GeminiWorker(api_key=GEMINI_API_KEY, prompt=prompt)
         self.worker.moveToThread(self.gemini_thread)
 
         # 完了後にオブジェクトが自動で削除され、参照がクリーンアップされるように接続
@@ -183,6 +236,17 @@ class MainWindow(QMainWindow):
         self.gemini_thread.finished.connect(self.on_thread_finished)
 
         self.gemini_thread.start()
+
+    def _get_gemini_response(self):
+        """Geminiからの応答を非同期で取得する"""
+        # 処理中であれば、新しいリクエストは受け付けない
+        if self.is_processing:
+            return
+
+        # 状態を「処理中」に更新し、UIを無効化
+        self._status_change(processing=True)
+        self.add_message(text="...", is_my_message=False)
+        self._start_thread()
 
     @Slot(str)
     def on_gemini_response(self, response_text: str):
@@ -212,39 +276,21 @@ class MainWindow(QMainWindow):
         self.send_button.setEnabled(True)
         self.message_line_edit.setEnabled(True)
 
-
-# バックグラウンドでGemini APIと通信するためのワーカー
-class GeminiWorker(QObject):
-    response_ready = Signal(str)
-    error_occurred = Signal(str)
-
-    def __init__(self, api_key: str, prompt: str):
-        super().__init__()
-        self.api_key = api_key
-        self.prompt = prompt
+    def closeEvent(self, event):
+        """ウィンドウが閉じられるときに呼ばれる"""
+        # 設定ダイアログも閉じる
+        self.settings_dialog.close()
+        event.accept()
 
     @Slot()
-    def run(self):
-        """APIリクエストを実行する"""
-        loop = None  # finallyブロックで参照できるようにするため
-        try:
-            # このスレッド用の新しいイベントループを作成して設定
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            client = genai.Client(api_key=self.api_key)
+    def open_settings_dialog(self):
+        """設定ダイアログを開く"""
+        dialog = SettingsDialog(self)
+        dialog.exec()
 
-            response = client.models.generate_content(
-                model='gemini-2.0-flash',
-                contents=self.prompt
-            )
-
-            self.response_ready.emit(response.text)
-        except Exception as e:
-            self.error_occurred.emit(f"APIエラー: {e}")
-        finally:
-            # イベントループを閉じる
-            if loop:
-                loop.close()
+    def open_settings_dialog(self):
+        """設定ダイアログを表示する"""
+        self.settings_dialog.exec_()
 
 
 if __name__ == "__main__":
