@@ -2,7 +2,6 @@
 from typing import Optional
 import sys
 import os
-import base64
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -14,6 +13,7 @@ from PySide6.QtCore import Slot, QTimer, QThread, QSettings
 # 上で作成したカスタムウィジェットをインポート
 from ui.chat_message_widget import ChatMessageWidget
 from google.gemini_worker import GeminiWorker
+from media.image_base64 import pil_image_base64
 
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
@@ -161,15 +161,7 @@ class MainWindow(QMainWindow):
     def on_send_button_clicked(self):
         """送信ボタンがクリックされたときに呼ばれる"""
         text = self.message_line_edit.text()
-        original_image_path = self.attached_image_path
-        image_data_base64 = None
-
-        # 画像が添付されている場合、Base64にエンコードする
-        if original_image_path:
-            with open(original_image_path, "rb") as image_file:
-                image_data = image_file.read()
-                image_data_base64 = base64.b64encode(
-                    image_data).decode("utf-8")
+        image_data_base64 = pil_image_base64(self.attached_image_path)
 
         # テキストも画像もなければ何もしない
         if not text and not image_data_base64:
