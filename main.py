@@ -16,10 +16,19 @@ from google.gemini_worker import GeminiWorker
 from media.image_base64 import pil_image_base64
 
 class SettingsDialog(QDialog):
+    def _q_settings(self) -> QSettings:
+        """QSettingsのインスタンスを返す"""
+        return QSettings("GeminiApp", "Chat")
+
+    def get_gemini_api_key(self) -> Optional[str]:
+        """設定からGEMINI_API_KEYを取得する"""
+        settings = self._q_settings()
+        return settings.value("GEMINI_API_KEY", None)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("GEMINI_API_KEYの設定")
-        self.settings = QSettings("GeminiApp", "Chat")
+        self.settings = self._q_settings()
 
         layout = QVBoxLayout(self)
 
@@ -181,20 +190,12 @@ class MainWindow(QMainWindow):
         elif text:
             self.get_gemini_response(prompt=text)
 
-    @Slot()
-    def open_settings_dialog(self):
-        """設定ダイアログを開く"""
-        dialog = SettingsDialog(self)
-        dialog.exec()
-
     def get_gemini_response(self, prompt: str):
         """Geminiからの応答を非同期で取得する"""
         # 処理中であれば、新しいリクエストは受け付けない
         if self.is_processing:
             return
-
-        settings = QSettings("GeminiApp", "Chat")
-        GEMINI_API_KEY = settings.value("GEMINI_API_KEY")
+        GEMINI_API_KEY = self.get_gemini_api_key()
         if not GEMINI_API_KEY:
             self.add_message(text="GEMINI_API_KEYが設定されていません。メニューから設定してください。",
                              is_my_message=False)
@@ -254,6 +255,12 @@ class MainWindow(QMainWindow):
         # 設定ダイアログも閉じる
         self.settings_dialog.close()
         event.accept()
+
+    @Slot()
+    def open_settings_dialog(self):
+        """設定ダイアログを開く"""
+        dialog = SettingsDialog(self)
+        dialog.exec()
 
     def open_settings_dialog(self):
         """設定ダイアログを表示する"""
