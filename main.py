@@ -55,6 +55,15 @@ class SettingsDialog(QDialog):
 
 
 class MainWindow(QMainWindow):
+    def _q_settings(self) -> QSettings:
+        """QSettingsのインスタンスを返す"""
+        return QSettings("GeminiApp", "Chat")
+
+    def get_gemini_api_key(self) -> Optional[str]:
+        """設定からGEMINI_API_KEYを取得する"""
+        settings = self._q_settings()
+        return settings.value("GEMINI_API_KEY", None)
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Banana Chat")
@@ -184,32 +193,29 @@ class MainWindow(QMainWindow):
         self.attached_image_path = None
         self.message_line_edit.setPlaceholderText("メッセージを入力...")
 
-        # ここで相手からの返信をシミュレートするなどのロジックを追加できます
-        if text and image_data_base64:
-            self.add_message(text="素敵な画像ですね！", is_my_message=False)
-        elif text:
-            self.get_gemini_response(prompt=text)
-
-    def get_gemini_response(self, prompt: str):
-        """Geminiからの応答を非同期で取得する"""
-        # 処理中であれば、新しいリクエストは受け付けない
-        if self.is_processing:
-            return
         GEMINI_API_KEY = self.get_gemini_api_key()
         if not GEMINI_API_KEY:
             self.add_message(text="GEMINI_API_KEYが設定されていません。メニューから設定してください。",
                              is_my_message=False)
             return
 
-        # 状態を「処理中」に更新し、UIを無効化
-        self.is_processing = True
-        self.send_button.setEnabled(False)
-        self.message_line_edit.setEnabled(False)
-        self.add_message(text="...", is_my_message=False)
+        # ここで相手からの返信をシミュレートするなどのロジックを追加できます
+        if text and image_data_base64:
+            self.add_message(text="素敵な画像ですね！", is_my_message=False)
+        elif text:
+            self.worker = GeminiWorker(api_key=GEMINI_API_KEY, prompt=text)
+            self._get_gemini_response()
 
+    def _status_change(self, processing: bool):
+        """状態を変更し、UIの有効/無効を切り替える"""
+        self.is_processing = processing
+        self.send_button.setEnabled(not processing)
+        self.message_line_edit.setEnabled(not processing)
+    
+    def _start_thread(self):
+        """Gemini API呼び出し用のスレッドを開始する"""
         # スレッドとワーカーをインスタンス変数として作成
         self.gemini_thread = QThread()
-        self.worker = GeminiWorker(api_key=GEMINI_API_KEY, prompt=prompt)
         self.worker.moveToThread(self.gemini_thread)
 
         # 完了後にオブジェクトが自動で削除され、参照がクリーンアップされるように接続
@@ -221,6 +227,17 @@ class MainWindow(QMainWindow):
         self.gemini_thread.finished.connect(self.on_thread_finished)
 
         self.gemini_thread.start()
+
+    def _get_gemini_response(self):
+        """Geminiからの応答を非同期で取得する"""
+        # 処理中であれば、新しいリクエストは受け付けない
+        if self.is_processing:
+            return
+
+        # 状態を「処理中」に更新し、UIを無効化
+        self._status_change(processing=True)
+        self.add_message(text="...", is_my_message=False)
+        self._start_thread()
 
     @Slot(str)
     def on_gemini_response(self, response_text: str):
