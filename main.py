@@ -176,10 +176,10 @@ class MainWindow(QMainWindow):
         self.message_line_edit.setPlaceholderText("メッセージを入力...")
 
         # ここで相手からの返信をシミュレートするなどのロジックを追加できます
-        if text:
-            self.get_gemini_response(prompt=text)
-        elif image_data_base64:
+        if text and image_data_base64:
             self.add_message(text="素敵な画像ですね！", is_my_message=False)
+        elif text:
+            self.get_gemini_response(prompt=text)
 
     @Slot()
     def open_settings_dialog(self):

@@ -22,17 +22,20 @@ class GeminiWorker(QObject):
             # このスレッド用の新しいイベントループを作成して設定
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            client = genai.Client(api_key=self.api_key)
+            self.response_ready.emit(self._text_to_text())
 
-            response = client.models.generate_content(
-                model='gemini-2.0-flash',
-                contents=self.prompt
-            )
-
-            self.response_ready.emit(response.text)
         except Exception as e:
             self.error_occurred.emit(f"APIエラー: {e}")
         finally:
             # イベントループを閉じる
             if loop:
                 loop.close()
+
+    def _text_to_text(self) -> str:
+        """同期的にGemini APIを呼び出すヘルパー関数"""
+        client = genai.Client(api_key=self.api_key)
+        response = client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=self.prompt
+        )
+        return response.text
