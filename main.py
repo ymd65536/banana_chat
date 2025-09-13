@@ -126,7 +126,7 @@ class MainWindow(QMainWindow):
             self.on_send_button_clicked)
 
         # --- 初期メッセージの追加 ---
-        self.add_message(text="こんにちは、GitHub Copilotです。", is_my_message=False)
+        self.add_message(text="こんにちは、bananaです。", is_my_message=False)
         self.add_message(text="こんにちは！", is_my_message=True)
 
         # --- 設定ダイアログ ---
