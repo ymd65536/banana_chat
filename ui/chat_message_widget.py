@@ -65,7 +65,7 @@ class ChatMessageWidget(QWidget):
             text_label.setWordWrap(True)
             # テキストの場合は背景を透明にし、パディングをなくす
             text_label.setStyleSheet(
-                "background-color: transparent; padding: 0px;")
+                "background-color: transparent; padding: 4px;font-size: 16px;")
             content_layout.addWidget(text_label)
 
         # メッセージの寄せ方を設定
