@@ -67,7 +67,15 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Banana Chat")
-        self.resize(800, 600)
+
+        # 画面サイズに合わせてウィンドウをリサイズ
+        screen = QApplication.primaryScreen()
+        if screen:
+            screen_geometry = screen.availableGeometry()
+            self.resize(screen_geometry.width(), screen_geometry.height())
+        else:
+            # フォールバックサイズ
+            self.resize(800, 600)
 
         # --- メニューバーの作成 ---
         menu_bar = self.menuBar()
