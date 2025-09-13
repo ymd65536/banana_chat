@@ -21,11 +21,13 @@ def img_base64(img_path):
 
 def pil_image_base64(img_path):
 
-    """Load an image from the given path and return a PIL Image object.
+    """Convert an image file to a base64 string using PIL for processing.
+
     Args:
-        img_path (str): The path of the image file. If None, returns None. 
+        img_path (str): The path of the image file. If None, returns None.
+
     Returns:
-        Image or None: A PIL Image object if img_path is valid, otherwise None.
+        str or None: The base64 string of the image if img_path is valid, otherwise None.
     """
 
     if not img_path:
