@@ -199,11 +199,12 @@ class MainWindow(QMainWindow):
                              is_my_message=False)
             return
 
+        self.worker = GeminiWorker(api_key=GEMINI_API_KEY, prompt=text)
+
         # ここで相手からの返信をシミュレートするなどのロジックを追加できます
         if text and image_data_base64:
-            self.add_message(text="素敵な画像ですね！", is_my_message=False)
+            self.add_message(text="banana!!", is_my_message=False)
         elif text:
-            self.worker = GeminiWorker(api_key=GEMINI_API_KEY, prompt=text)
             self._get_gemini_response()
 
     def _status_change(self, processing: bool):

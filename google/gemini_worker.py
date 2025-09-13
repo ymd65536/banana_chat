@@ -9,10 +9,11 @@ class GeminiWorker(QObject):
     response_ready = Signal(str)
     error_occurred = Signal(str)
 
-    def __init__(self, api_key: str, prompt: str):
+    def __init__(self, api_key: str, prompt: str, image_data_base64: str = None):
         super().__init__()
         self.api_key = api_key
         self.prompt = prompt
+        self.image_data_base64 = image_data_base64
 
     @Slot()
     def run(self):
@@ -22,7 +23,11 @@ class GeminiWorker(QObject):
             # このスレッド用の新しいイベントループを作成して設定
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            self.response_ready.emit(self._text_to_text())
+            if self.prompt and self.image_data_base64:
+                # 画像付きのプロンプト処理（必要に応じて実装）
+                pass
+            else:
+                self.response_ready.emit(self._text_to_text())
 
         except Exception as e:
             self.error_occurred.emit(f"APIエラー: {e}")
