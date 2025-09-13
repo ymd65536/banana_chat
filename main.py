@@ -67,7 +67,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Banana Chat")
-        self.resize(400, 600)
+        self.resize(800, 600)
 
         # --- メニューバーの作成 ---
         menu_bar = self.menuBar()
